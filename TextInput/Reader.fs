@@ -8,3 +8,9 @@ module Reader =
             | null | "" -> accumulator |> List.rev
             | line -> readLinesRec (line :: accumulator)
         readLinesRec []
+
+    let rec readLinesOrDefault (textReader: System.IO.TextReader) (_default: string list) =
+        printfn "Paste input (or nothing for builtin default), terminate with <CR> on empty line."
+        match readLines textReader with
+        | [] -> printfn "Using builtin default"; _default
+        | x -> printfn "Using provided input"; x

@@ -10,8 +10,8 @@ let similarityScore (left: int list) (right: int list) =
         | [] -> acc
     _similarityScore left 0
 
-let input = Reader.readLines Console.In |> Parser.linesToInts
-// let input = [ [3; 4]; [4; 3]; [2; 5]; [1; 3]; [3; 9]; [3; 3] ]
+let rawInput = Reader.readLinesOrDefault Console.In [ "3 4"; "4 3"; "2 5"; "1 3"; "3 9"; "3 3"; ]
+let input = rawInput |> Parser.linesToInts
 
 let left = input |> List.map (List.item 0)
 let right =  input |> List.map (List.item 1)
