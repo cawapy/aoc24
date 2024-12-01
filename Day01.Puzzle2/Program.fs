@@ -3,13 +3,7 @@ open TextInput
 
 let similarityScore (left: int list) (right: int list) =
     let count searchList searchItem =
-        let rec _count searchList searchItem acc =
-            match searchList with
-            | head :: tail when head = searchItem -> _count tail searchItem acc+1
-            | _ :: tail -> _count tail searchItem acc
-            | [] -> acc
-        let result = _count searchList searchItem 0
-        result
+        List.length (List.filter (fun x -> x = searchItem) searchList)
     let rec _similarityScore (inputList: int list) acc =
         match inputList with
         | head :: tail -> _similarityScore tail acc + head * count right head
