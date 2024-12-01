@@ -8,14 +8,10 @@ let calculateDistanceSum (left: int list) (right: int list) =
         (right |> List.sort )
     |> List.sum
 
-let extractColumn columnIndex rows =
-    List.map (List.item columnIndex) rows
-
-
 let input = Reader.readLines Console.In |> Parser.linesToInts
+let left = input |> List.map (List.item 0)
+let right = input |> List.map (List.item 1)
 
-let left = extractColumn 0 input
-let right = extractColumn 1 input
 let result = calculateDistanceSum left right
 
 printfn $"Result: {result}"
