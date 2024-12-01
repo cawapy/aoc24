@@ -1,5 +1,5 @@
-﻿#load "TextInput\Parser.fsx"
-#load "TextInput\Reader.fsx"
+﻿#load "TextInput/Parser.fsx"
+#load "TextInput/Reader.fsx"
 open System
 open TextInput
 
