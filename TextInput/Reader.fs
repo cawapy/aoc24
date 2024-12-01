@@ -4,8 +4,7 @@ module Reader =
 
     let readLines (textReader: System.IO.TextReader) =
         let rec readLinesRec accumulator =
-            let line = textReader.ReadLine()
-            match line with
+            match textReader.ReadLine() with
             | null | "" -> accumulator |> List.rev
-            | _ -> readLinesRec (line :: accumulator)
+            | line -> readLinesRec (line :: accumulator)
         readLinesRec []
