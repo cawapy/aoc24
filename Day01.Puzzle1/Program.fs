@@ -8,7 +8,9 @@ let totalDistanceSum (left: int list) (right: int list) =
         (right |> List.sort )
     |> List.sum
 
-let input = Reader.readLines Console.In |> Parser.linesToInts
+let lines = Reader.readLinesOrDefault Console.In [ "3   4"; "4   3"; "2   5"; "1   3"; "3   9"; "3   3"; ]
+let input = lines |> Parser.linesToInts
+
 let left = input |> List.map (List.item 0)
 let right = input |> List.map (List.item 1)
 
