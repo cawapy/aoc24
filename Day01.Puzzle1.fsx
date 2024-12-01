@@ -1,4 +1,6 @@
-﻿open System
+﻿#load "TextInput\Parser.fsx"
+#load "TextInput\Reader.fsx"
+open System
 open TextInput
 
 let totalDistanceSum (left: int list) (right: int list) =

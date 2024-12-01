@@ -1,4 +1,6 @@
-﻿open System
+﻿#load "TextInput\Parser.fsx"
+#load "TextInput\Reader.fsx"
+open System
 open TextInput
 
 let similarityScore (left: int list) (right: int list) =
