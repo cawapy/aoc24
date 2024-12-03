@@ -18,7 +18,14 @@ type Instruction =
 
 let parseLines (lines: string list) =
     let parseLine (line: string) =
-        Regex(@"mul\((?<mulX>\d{1,3}),(?<mulY>\d{1,3})\)|(?<do>do\(\))|(?<dont>don't\(\))")
+        Regex(@"  (?<do>    do\(\)               )
+                |           mul\(
+                               (?<mulX>  \d{1,3} )
+                               ,
+                               (?<mulY>  \d{1,3} )
+                            \)
+                | (?<dont>  don't\(\)            )
+                ", RegexOptions.IgnorePatternWhitespace)
             .Matches line
             |> Seq.map (fun (m:Match) -> if m.Groups["mulX"].Success then
                                              Mul { x = Int32.Parse(m.Groups["mulX"].Value)
