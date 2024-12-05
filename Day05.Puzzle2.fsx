@@ -20,13 +20,13 @@ let input = Reader.readInput { Reader.readInputOptions with
 
 let rules, updates = splitRulesAndUpdates input
 
-let fixUpdate (update: Update) (rules: Rule list) =
+let fixUpdate (rules: Rule list) (update: Update) =
     let comparePages (x: int) (y: int) =
         if pagePairViolatesRule rules (x, y) then 1 elif pagePairMatchesRule rules (x, y) then -1 else 0
     { Pages = List.sortWith comparePages update.Pages }
 
 let nonCompliantUpdates = updates |> List.where (fun update -> not (isCompliantUpdate rules update))
 
-let fixedUpdates = nonCompliantUpdates |> List.map (fun update -> fixUpdate update rules )
+let fixedUpdates = nonCompliantUpdates |> List.map (fixUpdate rules)
 let result = sumCenterPagesOfUpdates fixedUpdates
 printfn $"Sum of non-compliant but fixed updates' center page numbers: %A{result}"
