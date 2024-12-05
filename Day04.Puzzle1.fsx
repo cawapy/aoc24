@@ -25,10 +25,11 @@ let countWords (input: string list) (word: string) =
         let x, y = pos
         let dx, dy = direction
         [0 .. word.Length - 1] |> List.forall (fun i -> word[i] = getChar (x + i * dx) (y + i * dy) )
-    let startPoints = [ 0 .. input.Length - 1 ]
-                    |> List.collect (fun y -> [ 0 .. input[y].Length - 1 ] |> List.map (fun x -> (x, y) ))
+    let startPoints = seq { for y in 0 .. input.Length - 1 do
+                            for x in 0 .. input[y].Length - 1 do
+                            yield (x, y) }
     let directions = List.allPairs [ -1 .. 1 ] [ -1 .. 1 ] |> List.except [(0,0)]
-    List.allPairs startPoints directions |> List.where (fun pair -> isMatch (fst pair) (snd pair)) |> List.length
+    Seq.allPairs startPoints directions |> Seq.where (fun pair -> isMatch (fst pair) (snd pair)) |> Seq.length
 
 let xmasCount (input: string list) =
     countWords input "XMAS"

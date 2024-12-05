@@ -29,9 +29,10 @@ let countXmasCrossWords (input: string list) =
             (diag1 = ('M', 'S') || diag1 = ('S', 'M')) && (diag2 = ('M', 'S') || diag2 = ('S', 'M'))
         else
             false
-    let startPoints = [ 1 .. input.Length - 2 ]
-                    |> List.collect (fun y -> [ 1 .. input[y].Length - 2 ] |> List.map (fun x -> (x, y) ))
-    startPoints |> List.where isCross |> List.length
+    let startPoints = seq { for y in 1 .. input.Length-2 do
+                            for x in 1 .. input[y].Length-2 do
+                                yield (x, y) }
+    startPoints |> Seq.where isCross |> Seq.length
 
 let result = countXmasCrossWords input
 
