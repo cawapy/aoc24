@@ -22,11 +22,15 @@ module Day05 =
             | [] -> ( rulesAcc |> List.rev |> List.map parseRule, updatesAcc |> List.rev |> List.map parseUpdate)
         _splitRulesAndUpdates input true [] []
 
-    let isCompliantUpdate (update: Update) (rules: Rule list)  =
-        let pagePairViolatesRule (pair: int * int) =
-            rules |> List.exists (fun rule -> rule = { Before = snd pair; After = fst pair })
+    let pagePairMatchesRule (rules: Rule list) (pair: int * int) =
+        rules |> List.exists (fun rule -> rule = { Before = fst pair; After = snd pair })
+
+    let pagePairViolatesRule (rules: Rule list) (pair: int * int) =
+        rules |> List.exists (fun rule -> rule = { Before = snd pair; After = fst pair })
+
+    let isCompliantUpdate (rules: Rule list) (update: Update) =
         let pagesToCheck = [ 0..update.Pages.Length-2 ] |> List.collect (fun i -> [ i+1 .. update.Pages.Length-1 ] |> List.map (fun j -> (update.Pages[i], update.Pages[j])))
-        pagesToCheck |> List.exists pagePairViolatesRule = false
+        pagesToCheck |> List.exists (pagePairViolatesRule rules) = false
 
     let sumCenterPagesOfUpdates (updates: Update list)  =
         updates |> List.sumBy (fun u -> u.Pages[u.Pages.Length/2])
