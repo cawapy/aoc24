@@ -1,4 +1,6 @@
 #load "TextInput/Reader.fsx"
+open System.Collections.Generic
+open System.Diagnostics
 open TextInput
 
 let input = Reader.readInput { Reader.readInputOptions with
@@ -37,9 +39,9 @@ let findObstacles (stringListMap: string list) =
             map[y][x]
         else ' '
 
-    let rec step (map: char array array) (guardX: int) (guardY: int) (guard: char) (steps: (int * int * char) list) =
+    let rec step (map: char array array) (guardX: int) (guardY: int) (guard: char) (steps: (int * int * char) list) (stepHash: HashSet<int * int * char>)=
 
-        if List.contains (guardX, guardY, guard) steps then // already been here, going in same direction -> loop
+        if stepHash.Contains (guardX, guardY, guard) then // already been here, going in same direction -> loop
             []
         else
             let collisionRule = rules |> Seq.where (fun r -> r.Cursor = guard) |> Seq.item 0
@@ -49,11 +51,12 @@ let findObstacles (stringListMap: string list) =
             match nextFieldValue with
 
             // obstacle ahead: turn and continue without doing a true step
-            | '#' -> step map guardX guardY collisionRule.CursorAfterCollision steps
+            | '#' -> step map guardX guardY collisionRule.CursorAfterCollision steps stepHash
 
             // free field (or guard's starting position) ahead: record step and continue: ...
             | '.' | '^' | '>' | 'v' | '<'
-                  -> step map nextX nextY guard ((guardX,guardY,guard) :: steps)
+                  -> stepHash.Add (guardX,guardY,guard) |> ignore
+                     step map nextX nextY guard ((guardX,guardY,guard) :: steps) stepHash
 
             // edge of map ahead: end journey with last step
             | ' ' -> ((guardX,guardY,guard) :: steps)
@@ -65,21 +68,25 @@ let findObstacles (stringListMap: string list) =
     let originalMap = (makeArray stringListMap)
     let x, y = startPosition originalMap
     let d = fieldValue originalMap x y
-    let path = step originalMap x y d [] |> List.rev |> List.distinctBy (fun (x, y, _) -> (x, y))
+    let path = step originalMap x y d [] (HashSet<int*int*char>()) |> List.rev |> List.distinctBy (fun (x, y, _) -> (x, y))
+    let length = path.Length
 
     // try to place obstacles along path and check again for loop
-    let obstacleCausesLoop (startPosition: int * int * char) (obstaclePosition: int * int * _) =
+    let obstacleCausesLoop (startPosition: int * int * char) (obstaclePosition: int * int * _) i =
+
         let x0, y0, d = startPosition
         let xX, yX, _ = obstaclePosition
         if stringListMap[yX][xX] = '.' then
             let modifiedMap = makeArray stringListMap
             modifiedMap[yX][xX] <- '#'
-            step modifiedMap x0 y0 d [] = []
+            step modifiedMap x0 y0 d [] (HashSet<int*int*char>()) = []
         else
             false
-    let positions = List.pairwise path |> List.where (fun pair -> obstacleCausesLoop (fst pair) (snd pair))
-    positions |> List.length
+    let positions = List.pairwise path |> Seq.zip [1..length-1] |> Seq.where (fun pair -> obstacleCausesLoop (fst (snd pair)) (snd (snd pair)) (fst pair))
+    positions |> Seq.length
 
+let sw = Stopwatch.StartNew();
 let numberOfObstacles = findObstacles input
+printfn $"Calculating obstacle count took {sw.Elapsed}"
 
 printfn $"Number of possible obstacle positions: {numberOfObstacles}"
