@@ -73,12 +73,12 @@ let findObstacles (stringListMap: string list) =
     // try to place obstacles along path and check again for loop
     let obstacleCausesLoop (position: int * int) =
         let x, y = position
-        let modifiedMap = makeArray stringListMap
-        if modifiedMap[y][x] = '^' then
-            false
-        else
+        if stringListMap[y][x] = '.' then
+            let modifiedMap = makeArray stringListMap
             modifiedMap[y][x] <- '#'
             run modifiedMap = []
+        else
+            false
     let positions = path |> List.where obstacleCausesLoop
     positions |> List.length
 
