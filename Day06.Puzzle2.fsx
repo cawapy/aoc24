@@ -16,14 +16,14 @@ let input = Reader.readInput { Reader.readInputOptions with
                                                 "......#..."; ] }
 
 
-type Rule = { Cursor: char; direction: int*int; CursorAfterCollision: char }
+type Rule = { direction: int*int; CursorAfterCollision: char }
 
 let findObstacles (stringListMap: string list) =
 
-    let rules = [ { Cursor = '^'; direction = ( 0, -1); CursorAfterCollision = '>' };
-                  { Cursor = '>'; direction = ( 1,  0); CursorAfterCollision = 'v' };
-                  { Cursor = 'v'; direction = ( 0,  1); CursorAfterCollision = '<' };
-                  { Cursor = '<'; direction = (-1,  0); CursorAfterCollision = '^' } ]
+    let rules = [ ('^', { direction = ( 0, -1); CursorAfterCollision = '>' })
+                  ('>', { direction = ( 1,  0); CursorAfterCollision = 'v' })
+                  ('v', { direction = ( 0,  1); CursorAfterCollision = '<' })
+                  ('<', { direction = (-1,  0); CursorAfterCollision = '^' }) ] |> Map.ofList
 
     let startPosition (map: char array array) =
         let isCursor (pos: int * int) =
@@ -44,7 +44,7 @@ let findObstacles (stringListMap: string list) =
         if stepHash.Contains (guardX, guardY, guard) then // already been here, going in same direction -> loop
             []
         else
-            let collisionRule = rules |> Seq.where (fun r -> r.Cursor = guard) |> Seq.item 0
+            let collisionRule = rules[guard]
             let nextX, nextY = (guardX + fst collisionRule.direction, guardY + snd collisionRule.direction)
             let nextFieldValue = fieldValue map nextX nextY
 
@@ -72,7 +72,7 @@ let findObstacles (stringListMap: string list) =
     let length = path.Length
 
     // try to place obstacles along path and check again for loop
-    let obstacleCausesLoop (startPosition: int * int * char) (obstaclePosition: int * int * _) i =
+    let obstacleCausesLoop (startPosition: int * int * char) (obstaclePosition: int * int * _) =
 
         let x0, y0, d = startPosition
         let xX, yX, _ = obstaclePosition
@@ -82,7 +82,7 @@ let findObstacles (stringListMap: string list) =
             step modifiedMap x0 y0 d [] (HashSet<int*int*char>()) = []
         else
             false
-    let positions = List.pairwise path |> Seq.zip [1..length-1] |> Seq.where (fun pair -> obstacleCausesLoop (fst (snd pair)) (snd (snd pair)) (fst pair))
+    let positions = Seq.pairwise path |> Seq.where (fun pair -> obstacleCausesLoop (fst pair) (snd pair))
     positions |> Seq.length
 
 let sw = Stopwatch.StartNew();
