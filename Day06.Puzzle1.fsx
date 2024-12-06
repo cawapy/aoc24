@@ -29,31 +29,28 @@ let guardSteps (map: string list) =
                         |> Seq.collect (fun y -> [0 .. map[y].Length - 1] |> Seq.map (fun x -> (x, y)))
                         |> Seq.where isCursor
                         |> Seq.item 0
-    let rec step (map: char array array) (guardX: int) (guardY: int) fieldCountAccumulator =
+    let rec step (map: char array array) (guardX: int) (guardY: int) (guard: char) (steps: (int * int) list) =
         let fieldValue (x: int) (y: int) =
             if 0 <= y && y < map.Length && 0 <= x && x < map[y].Length then
                 map[y][x]
             else ' '
-        let guard = map[guardY][guardX]
         let collisionRule = rules |> Seq.where (fun r -> r.Cursor = guard) |> Seq.item 0
         let nextX, nextY = (guardX + fst collisionRule.direction, guardY + snd collisionRule.direction)
         let nextFieldValue = fieldValue nextX nextY
         match nextFieldValue with
-        | '#' -> // obstacle ahead: turn and continue without counting a field
-                 map[guardY][guardX] <- collisionRule.CursorAfterCollision
-                 step map guardX guardY fieldCountAccumulator
-        | '.' -> // unvisited field ahead: enter field and continue with counting the field
-                 map[guardY][guardX] <- 'X'
-                 map[nextY][nextX] <- guard
-                 step map nextX nextY fieldCountAccumulator+1
-        | 'X' -> // visited field ahead: enter field and continue without counting the field
-                 map[guardY][guardX] <- 'X'
-                 map[nextY][nextX] <- guard
-                 step map nextX nextY fieldCountAccumulator
-        | ' ' -> // edge of map ahead: leave behind one more visited field
-                 fieldCountAccumulator + 1
+        // obstacle ahead: turn and continue without doing a true step
+        | '#' -> step map guardX guardY collisionRule.CursorAfterCollision steps
+
+        // free field (or guard's starting position) ahead: record step and continue: ...
+        | '.' | '^' | '>' | 'v' | '<'
+              -> step map nextX nextY guard ((guardX,guardY) :: steps)
+        // edge of map ahead: end journey with last step
+        | ' ' -> ((guardX,guardY) :: steps)
         | _ -> failwith $"Unexpected value of next field: '{nextFieldValue}"
-    step (input |> List.map _.ToCharArray() |> List.toArray) (fst startPosition) (snd startPosition) 0
+    let x, y = startPosition
+    let mapArray = input |> List.map _.ToCharArray() |> List.toArray
+    let allSteps = step mapArray x y mapArray[y].[x] []
+    allSteps |> List.distinct |> List.length
 
 let steps = guardSteps input
 
