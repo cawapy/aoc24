@@ -7,12 +7,15 @@ type Block = File of int | None
 
 let toBlockMap (diskMap: string) =
     let endOfDisk = diskMap.Length
+    let rec prepend (block: Block) (count: int) (acc: Block list) =
+        if count = 0 then acc
+        else prepend block (count - 1) (block :: acc)
     let rec _readBlockMap (pos: int) (acc: Block list) =
-        if pos = endOfDisk then acc
+        if pos = endOfDisk then acc |> List.rev
         else
             let size = int (diskMap[pos] - '0')
             let block = if pos % 2 = 0 then File (pos / 2) else None
-            _readBlockMap (pos + 1) (acc @ List.replicate size block)
+            _readBlockMap (pos + 1) (prepend block size acc)
     _readBlockMap 0 []
 
 let format (blockMap: Block list) =
