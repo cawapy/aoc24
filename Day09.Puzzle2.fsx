@@ -23,44 +23,63 @@ let format (blockMap: Block list) =
     String.concat "" elements
 
 let compactBlocks (blockMap: Block list) =
-    let rec extractFile (id: int) (input: Block list) (lengthAcc: int) (replaced: Block list) (unreplaced: Block list) =
-        match input with
-        | File i as f :: tail when i = id -> extractFile id tail (lengthAcc + 1) (Unassigned :: replaced) (f :: unreplaced)
-        | f :: tail -> (lengthAcc, f::tail, replaced, unreplaced)
-        | []        -> (lengthAcc, [],   replaced, unreplaced)
-    let rec tryInsert (input: Block list) (length: int) (id: int) (lengthAcc: int) (inserted: Block list) (notInserted: Block list) =
-        match input with
-        | Unassigned :: tail when lengthAcc + 1 = length
-            -> Some ((List.rev (File id :: inserted)) @ tail)
-        | Unassigned :: tail
-            -> tryInsert tail length id (lengthAcc+1) (File id :: inserted) (Unassigned :: notInserted)
-        | File x :: _ when x = id // own file detected; don't move
-            -> None
-        | File _ as f :: tail
-            -> tryInsert tail length id 0 (f :: notInserted) (f :: notInserted)
-        | []
-            -> None
-    let rec _compactBlocks (front: Block list) (back: Block list) (backAcc: Block list) =
-            match back with
-            | File id as f :: backTail ->
-                let length, remainingBackTail, extractedAcc, unextractedAcc = extractFile id backTail 1 (Unassigned::backTail) (f::backTail)
-                let inserted = tryInsert front length id 0 [] []
-                match inserted with
-                | Some blocks ->
-                    printfn $"Moved {id} ({length}x): {format blocks}"
-                    _compactBlocks blocks remainingBackTail extractedAcc
+
+    let blocks = blockMap |> List.toArray
+
+    let rec findEndOfGap length (startIndex: int) (index: int) =
+        if index >= blocks.Length then None
+        elif index - startIndex = length then Some startIndex
+        else match blocks[index] with
+                | Unassigned -> findEndOfGap length startIndex (index + 1)
+                | _          -> findEndOfGap length (index + 1) (index + 1)
+
+    let rec findGap length i =
+        if i >= blocks.Length then None
+        else match blocks[i] with
+                | Unassigned ->
+                        match findEndOfGap length i i with
+                        | Some start -> Some start
+                        | None -> findGap length (i+1)
+                | _ -> findGap length (i+1)
+
+    let rec findStartOfFile (f: int) (endIndex: int) (index: int) =
+        if index = 0 then Some (f, 0, endIndex)
+        else match blocks[index-1] with
+                | File g when g = f -> findStartOfFile f endIndex (index - 1)
+                | _                 -> Some (f, index, endIndex - index)
+
+    let rec findFile i =
+        if i = 0 then None
+        else match blocks[i-1] with
+                | File f -> findStartOfFile f i (i - 1)
+                | _ -> findFile (i - 1)
+
+    let rec relocate fromIndex toIndex count =
+        if count = 0 then ()
+        else
+            blocks[toIndex] <- blocks[fromIndex]
+            blocks[fromIndex] <- Unassigned
+            relocate (fromIndex+1) (toIndex+1) (count-1)
+
+    let tryRelocate fileLength fileStart =
+        match findGap fileLength 0 with
+        | Some gapStart when gapStart < fileStart
+            -> relocate fileStart gapStart fileLength
+        | _ -> ()
+
+    let rec _compactBlocks (index: int) =
+
+        if index <= 0 then blocks |> Array.toList
+        else match findFile index with
                 | None ->
-                    printfn $"Kept  {id} ({length}x): {format front}"
-                    _compactBlocks front remainingBackTail unextractedAcc
-            | Unassigned :: backTail ->
-                        _compactBlocks front backTail (Unassigned::backAcc)
-            | [] -> backAcc |> List.rev
-    _compactBlocks blockMap (List.rev blockMap) []
+                    _compactBlocks (index - 1)
+                | Some (file, start, len) ->
+                    tryRelocate len start
+                    _compactBlocks start
+    _compactBlocks blocks.Length
 
 let inputBm = toBlockMap input
-printfn $"{format inputBm}"
 let outputBm = compactBlocks inputBm
-printfn $"{format outputBm}"
 
 let checksum = outputBm |> Seq.mapi (fun position value -> int64 (position * match value with File f -> f | _ -> 0)) |> Seq.sum
 
