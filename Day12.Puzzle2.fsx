@@ -15,19 +15,22 @@ let lines = Reader.readInput { Reader.readInputOptions with
                                         "MMMISSJEEE";
                                    ] }
 
-let input: char array array  = lines |> List.map _.ToCharArray() |> List.toArray
+type Map = char array array
+type Pos = int * int
+type Direction = N | S | W | E
+type Region = char * Pos list * int
 
-let getPlant (map: char array array) (pos: int * int) =
+let input: Map = lines |> List.map _.ToCharArray() |> List.toArray
+
+
+
+let getPlant (map: Map) (pos: Pos) =
     let x, y = pos
     if 0 <= y && y < map.Length && 0 <= x && x < map[y].Length then map[y][x]
     else ' '
 
 let coordinates (twoDArray: 'a array array) =
     [0..twoDArray.Length-1] |> List.collect (fun y -> [0..twoDArray[y].Length-1] |> List.map (fun x -> (x,y)))
-
-type Pos = int * int
-type Direction = N | S | W | E
-type Region = char * (int * int) list * int
 
 let rec countConnectedPieces (pieces: (Pos * Direction) list) =
     let countConnectedHorizontal1Row (xx: int list) =
@@ -43,15 +46,15 @@ let rec countConnectedPieces (pieces: (Pos * Direction) list) =
         rows |> List.sumBy (fun (_, values) -> (countConnectedHorizontal1Row (values |> List.map snd)))
     pieces |> List.groupBy snd |> List.sumBy (fun (direction: Direction, posNDirections: (Pos * Direction) list) ->
         let allPositions: Pos list = match direction with
-                                        | E | W -> posNDirections |> List.map (fun ((x: int, y: int), _) -> (x, y))
-                                        | N | S -> posNDirections |> List.map (fun ((x: int, y: int), _) -> (y, x)) // swap X and Y and use horizontal logic
+                                        | E | W -> posNDirections |> List.map (fun ((x, y), _) -> (x, y))
+                                        | N | S -> posNDirections |> List.map (fun ((x, y), _) -> (y, x)) // swap X and Y and use horizontal logic
         let result = allPositions |> countConnectedHorizontally
         result
     )
 
-let findRegion (map: char array array) (pos: int * int) =
+let findRegion (map: Map) (pos: Pos) =
     let regionPlant = getPlant map pos
-    let rec _findRegion (pos: int * int) (visited: (int * int) list) (region: (int * int) list) (allFences: (Pos * Direction) list) =
+    let rec _findRegion (pos: Pos) (visited: Pos list) (region: Pos list) (allFences: (Pos * Direction) list) =
         if getPlant map pos <> regionPlant || List.contains pos visited then
             (visited, region, allFences)
         else
@@ -74,7 +77,7 @@ let findRegion (map: char array array) (pos: int * int) =
     let sideCount = countConnectedPieces sidePieces
     (regionPlant, regionFields, sideCount)
 
-let printRegion (map: char array array) (region: Region) =
+let printRegion (map: Map) (region: Region) =
     printfn "-----------------------------------"
     let plant, fields, _ = region
     for y in 0..map.Length-1 do
@@ -86,8 +89,8 @@ let printRegion (map: char array array) (region: Region) =
         printfn ""
 
 
-let findRegions (map: char array array) =
-    let rec _findRegions (coordinates: (int * int) list) (regions: Region list) =
+let findRegions (map: Map) =
+    let rec _findRegions (coordinates: Pos list) (regions: Region list) =
         match coordinates with
         | pos :: otherCoordinates ->
             let currentRegion = findRegion map pos
