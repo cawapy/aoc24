@@ -83,6 +83,8 @@ let findPath (maze: Maze) =
                 List.where (fun (x, y) -> maze[y][x] = 'S') |> List.item 0
     _findPaths start (1, 0) [] 0 None
 
+let sw = System.Diagnostics.Stopwatch.StartNew()
 match findPath maze with
 | Some (_, score) -> printfn $"Lowest score is {score}"
 | _ -> printfn "Could not find path"
+printfn $"Took {sw.Elapsed}"
