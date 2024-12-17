@@ -55,20 +55,24 @@ let findPath (maze: Maze) =
         | Some (_, l), Some (_, r) when l < r -> left
         | _ -> right
     let costArray = maze |> Array.map (fun row -> Array.replicate row.Length 0x7fffffff)
+    let visitedArray = maze |> Array.map (fun row -> Array.replicate row.Length false)
     let rec _findPaths (x: int, y: int) (dx: int, dy: int) (path: Path) (cost: int) =
-        if costArray[y][x] < cost then None
+        if costArray[y][x] < cost || visitedArray[y][x] then None
         else
             costArray[y][x] <- cost
-            match maze[y][x] with
-            | '.' | 'S' ->
-                let straightOption = if List.contains (x+dx, y+dy) path then None else _findPaths (x+dx, y+dy) (dx, dy) ((x, y) :: path) (cost+1)
-                let leftOption = if List.contains (x+dy, y-dx) path then None else _findPaths (x+dy, y-dx) (dy, -dx) ((x, y) :: path) (cost+1001)
-                let rightOption = if List.contains (x-dy, y+dx) path then None else _findPaths (x-dy, y+dx) (-dy, dx) ((x, y) :: path) (cost+1001)
-                selectMin (selectMin straightOption leftOption) rightOption
-            | 'E' ->
-                let result: Path = path |> List.rev
-                Some (result, cost)
-            | _ -> None
+            visitedArray[y][x] <- true
+            let ret = match maze[y][x] with
+                        | '.' | 'S' ->
+                            let straightOption = _findPaths (x+dx, y+dy) (dx, dy) ((x, y) :: path) (cost+1)
+                            let leftOption = _findPaths (x+dy, y-dx) (dy, -dx) ((x, y) :: path) (cost+1001)
+                            let rightOption = _findPaths (x-dy, y+dx) (-dy, dx) ((x, y) :: path) (cost+1001)
+                            selectMin (selectMin straightOption leftOption) rightOption
+                        | 'E' ->
+                            let result: Path = path |> List.rev
+                            Some (result, cost)
+                        | _ -> None
+            visitedArray[y][x] <- false
+            ret
     let start = [0..maze.Length-1] |> List.collect (fun y -> [0..maze[y].Length-1] |> List.map (fun x -> (x, y))) |>
                 List.where (fun (x, y) -> maze[y][x] = 'S') |> List.item 0
     _findPaths start (1, 0) [] 0
