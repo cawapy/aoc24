@@ -51,13 +51,6 @@ let findPath (maze: Maze) =
         match input with
         | Some (_, cost) -> Some cost
         | _ -> None
-    let minCost (left: int option) (right: int option) =
-        match (left, right) with
-        | None, None -> None
-        | Some _, None -> left
-        | None, Some _ -> right
-        | Some l, Some r when l <= r -> left
-        | _ -> right
     let selectMin (left: ('a * int) option) (right: ('a * int) option) =
         match (left, right) with
         | None, None -> None
@@ -65,23 +58,27 @@ let findPath (maze: Maze) =
         | None, Some _ -> right
         | Some (_, l), Some (_, r) when l < r -> left
         | _ -> right
+    let costArray = maze |> Array.map (fun row -> Array.replicate row.Length 0x7fffffff)
     let rec _findPaths (x: int, y: int) (dx: int, dy: int) (path: Path) (cost: int) (maxCost: int option) =
-        match maxCost with
-        | Some n when n < cost -> printfn $"cancel: {cost} > max ({n})"; None
-        | _ ->
-            match maze[y][x] with
-            | '.' | 'S' ->
-                let straightOption = if List.contains (x+dx, y+dy) path then None else _findPaths (x+dx, y+dy) (dx, dy) ((x, y) :: path) (cost+1) maxCost
+        if costArray[y][x] < cost then None
+        else
+            costArray[y][x] <- cost
+            match maxCost with
+            | Some n when n < cost -> printfn $"cancel: {cost} > max ({n})"; None
+            | _ ->
+                match maze[y][x] with
+                | '.' | 'S' ->
+                    let straightOption = if List.contains (x+dx, y+dy) path then None else _findPaths (x+dx, y+dy) (dx, dy) ((x, y) :: path) (cost+1) maxCost
 
-                let leftOption = if List.contains (x+dy, y-dx) path then None else _findPaths (x+dy, y-dx) (dy, -dx) ((x, y) :: path) (cost+1001) (getCost straightOption)
+                    let leftOption = if List.contains (x+dy, y-dx) path then None else _findPaths (x+dy, y-dx) (dy, -dx) ((x, y) :: path) (cost+1001) (getCost straightOption)
 
-                let nonRightOption = selectMin straightOption leftOption
-                let rightOption = if List.contains (x-dy, y+dx) path then None else _findPaths (x-dy, y+dx) (-dy, dx) ((x, y) :: path) (cost+1001) (getCost nonRightOption)
-                selectMin nonRightOption rightOption
-            | 'E' ->
-                let result: Path = path |> List.rev
-                Some (result, cost)
-            | _ -> None
+                    let nonRightOption = selectMin straightOption leftOption
+                    let rightOption = if List.contains (x-dy, y+dx) path then None else _findPaths (x-dy, y+dx) (-dy, dx) ((x, y) :: path) (cost+1001) (getCost nonRightOption)
+                    selectMin nonRightOption rightOption
+                | 'E' ->
+                    let result: Path = path |> List.rev
+                    Some (result, cost)
+                | _ -> None
     let start = [0..maze.Length-1] |> List.collect (fun y -> [0..maze[y].Length-1] |> List.map (fun x -> (x, y))) |>
                 List.where (fun (x, y) -> maze[y][x] = 'S') |> List.item 0
     _findPaths start (1, 0) [] 0 None
