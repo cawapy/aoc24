@@ -47,19 +47,18 @@ type Pos = int * int
 type Path = Pos list
 
 let findPaths (maze: Maze) =
-    let rec _findPaths (x: int, y: int) (path: Path) =
+    let rec _findPaths (x: int, y: int) (dx: int, dy: int) (path: Path) =
         match maze[y][x] with
         | '.' | 'S' ->
-            let pEast: Path list = if List.contains (x+1, y) path then [] else _findPaths (x+1, y)  ((x, y) :: path)
-            let pWest: Path list = if List.contains (x-1, y) path then [] else _findPaths (x-1, y)  ((x, y) :: path)
-            let pNorth: Path list = if List.contains (x, y-1) path then [] else _findPaths (x, y-1) ((x, y) :: path)
-            let pSouth: Path list = if List.contains (x, y+1) path then [] else _findPaths (x, y+1) ((x, y) :: path)
-            pEast @ pWest @ pNorth @ pSouth
+            let pStraight: Path list = if List.contains (x+dx, y+dy) path then [] else _findPaths (x+dx, y+dy) (dx, dy) ((x, y) :: path)
+            let pLeft: Path list = if List.contains (x+dy, y-dx) path then [] else _findPaths (x+dy, y-dx) (dy, -dx) ((x, y) :: path)
+            let pRight: Path list = if List.contains (x-dy, y+dx) path then [] else _findPaths (x-dy, y+dx) (-dy, dx) ((x, y) :: path)
+            pStraight @ pLeft @ pRight
         | 'E' -> printf "P"; [path |> List.rev]
         | _ -> []
     let start = [0..maze.Length-1] |> List.collect (fun y -> [0..maze[y].Length-1] |> List.map (fun x -> (x, y))) |>
                 List.where (fun (x, y) -> maze[y][x] = 'S') |> List.item 0
-    _findPaths start []
+    _findPaths start (1, 0) []
 
 let pathScore (path: Path) =
     let getDirection ((x0, y0): Pos, (x1, y1): Pos) =
