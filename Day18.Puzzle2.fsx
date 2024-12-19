@@ -69,18 +69,33 @@ let findPath (listMap: Map) =
 let len = if lines.Length = 25 then 7 else 71
 let input = parse lines
 
-let rec findFirstByteBreakingPath (input: Pos list) (n: int) =
-    let sw = System.Diagnostics.Stopwatch.StartNew()
+let binarySearchTransition (lower: int) (upper: int) (predicate: int -> bool) =
+    let rec _binarySearchTransition (lower: int) (upper: int) =
+        if lower = upper then failwith "lower = upper"
+        if lower + 1 = upper then
+            Some (lower-1, upper-1)
+        else
+            let test = (lower + upper) / 2
+            if predicate test then
+                _binarySearchTransition lower test
+            else
+                _binarySearchTransition test upper
+    if upper <= lower then failwith "Upper = lower"
+    if predicate lower || not (predicate upper) then
+        None
+    else
+        _binarySearchTransition lower upper
+
+
+let isBreakingPath (input: Pos list) (n: int) =
     let map = generateMap len (input |> Seq.take n |> Seq.toList)
     //printMap map
-    //printfn "---------------------------------------"
     match findPath map with
-    | Some minLen ->
-        printfn $"tried {n} - {sw.Elapsed}"
-        findFirstByteBreakingPath input (n + 1)
-    | _ -> input |> List.item (n - 1)
+    | Some _ -> false
+    | None -> true
 
-let startbytes = if input.Length = 25 then 0 else 1024
-
-let pos = findFirstByteBreakingPath input startbytes
-printfn $"Pos of byte breaking path is %A{pos}"
+match binarySearchTransition 0 input.Length (isBreakingPath input) with
+| Some (_, upper) ->
+    let x, y = input |> List.item upper
+    printfn $"Pos of byte breaking path is {x},{y}"
+| None -> printfn "Not found"
