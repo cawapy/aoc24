@@ -63,31 +63,33 @@ let findCheats (((dmFwd, dmBwd), pathLength): CheatInput) : Cheat list =
     let lenX = dmFwd.GetLength 0
     let lenY = dmFwd.GetLength 1
     let trackCheats (startOnTrack: Pos) : Cheat list =
-        let rec _trackCheats (startInfo: Pos * int) ((x, y): Pos) (cheatPath: Pos list) (cheatLength: int) : Cheat list =
+        let rec _trackCheats (startInfo: Pos * int) (directions: Pos * Pos) ((x, y): Pos) (cheatPath: Pos list) (cheatLength: int) : Cheat list =
             if cheatLength > maxLen ||
                x < 0 || lenX <= x || y < 0 || lenY <= y ||
                 cheatPath |> List.contains (x,y)
                 then []
-            else match dmBwd[x,y] with
-                    | -1 ->
-                        _trackCheats startInfo (x-1, y) ((x,y)::cheatPath) (cheatLength+1) @
-                        _trackCheats startInfo (x+1, y) ((x,y)::cheatPath) (cheatLength+1) @
-                        _trackCheats startInfo (x, y-1) ((x,y)::cheatPath) (cheatLength+1) @
-                        _trackCheats startInfo (x, y+1) ((x,y)::cheatPath) (cheatLength+1)
-                    | remaining -> // found a track
-                        let cheatStart, startSteps = startInfo
-                        let newLength = startSteps + cheatLength + remaining - 1
-                        let savings = pathLength - newLength
-                        if savings <= 0 then []
-                        else
-                            let cheatEnd = (x, y)
-                            [ ((cheatStart, cheatEnd), savings) ]
+            else
+                let (dx1, dy1), (dx2, dy2) = directions
+                let fromRecursion = _trackCheats startInfo directions (x+dx1, y+dy1) ((x,y)::cheatPath) (cheatLength+1) @
+                                    _trackCheats startInfo directions (x+dx2, y+dy2) ((x,y)::cheatPath) (cheatLength+1)
+                let remaining = dmBwd[x,y]
+                let direct = if remaining <> -1 then
+                                let cheatStart, startSteps = startInfo
+                                let newLength = startSteps + cheatLength + remaining - 1
+                                let savings = pathLength - newLength
+                                if savings <= 0 then []
+                                else
+                                    let cheatEnd = (x, y)
+                                    [ ((cheatStart, cheatEnd), savings) ]
+                             else []
+                direct @ fromRecursion
         let startSteps = dmFwd[fst startOnTrack,snd startOnTrack]
         [(-1, 0); (1, 0); (0, -1); (0, 1)] |>
             List.collect (fun (dx, dy) ->
                 let cheatStart = (fst startOnTrack + dx, snd startOnTrack + dy)
                 if dmFwd[fst cheatStart, snd cheatStart] = -1 then
-                    _trackCheats (cheatStart, startSteps) cheatStart [] 1
+                    _trackCheats (cheatStart, startSteps) ((dx, dy), (dy, dx)) cheatStart [] 1 @
+                    _trackCheats (cheatStart, startSteps) ((dx, dy), (-dy, -dx)) cheatStart [] 1
                 else []
             )
     let positions = coordinates dmFwd |>
@@ -118,3 +120,16 @@ let numberSavingAtLeast n = cheats |> Seq.where (fun c -> snd c >= n) |> Seq.len
 
 printfn $"There are {numberSavingAtLeast 50} cheats that would save at least 50 ps"
 printfn $"There are {numberSavingAtLeast 100} cheats that would save at least 100 ps"
+
+
+let (a,b), _ = cheatInfo
+
+printArray a (fun x y ->
+    let an = a[x,y]
+    let bn = b[x,y]
+    let aS = if an = -1 then "" else $"{an}"
+    let bS = if bn = -1 then "" else $"{bn}"
+    $"{aS};{bS};";
+    )
+
+printfn $"%A{cheats |> List.where (fun x -> snd x = 76)}"
