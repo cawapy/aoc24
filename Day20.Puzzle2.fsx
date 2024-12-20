@@ -62,34 +62,37 @@ let findCheats (((dmFwd, dmBwd), pathLength): CheatInput) : Cheat list =
     let maxLen = 20
     let lenX = dmFwd.GetLength 0
     let lenY = dmFwd.GetLength 1
+
     let trackCheats (startOnTrack: Pos) : Cheat list =
-        let rec _trackCheats (startInfo: Pos * int) (directions: Pos * Pos) ((x, y): Pos) (cheatPath: Pos list) (cheatLength: int) : Cheat list =
-            if cheatLength > maxLen ||
-               x < 0 || lenX <= x || y < 0 || lenY <= y ||
-                cheatPath |> List.contains (x,y)
-                then []
+        let rec _trackCheats (cheatStart: Pos) (stepsStart: int) (direction: Pos) (cheatLength: int) (acc: Cheat list list): Cheat list =
+            if cheatLength > maxLen then acc |> List.concat
             else
-                let (dx1, dy1), (dx2, dy2) = directions
-                let fromRecursion = _trackCheats startInfo directions (x+dx1, y+dy1) ((x,y)::cheatPath) (cheatLength+1) @
-                                    _trackCheats startInfo directions (x+dx2, y+dy2) ((x,y)::cheatPath) (cheatLength+1)
-                let remaining = dmBwd[x,y]
-                let direct = if remaining <> -1 then
-                                let cheatStart, startSteps = startInfo
-                                let newLength = startSteps + cheatLength + remaining - 1
-                                let savings = pathLength - newLength
-                                if savings <= 0 then []
-                                else
-                                    let cheatEnd = (x, y)
-                                    [ ((cheatStart, cheatEnd), savings) ]
-                             else []
-                direct @ fromRecursion
+                let x, y = cheatStart
+                let dx, dy = direction
+                let cheatEnds = [ 0 .. cheatLength-1 ] |>
+                                    List.map (fun i -> (x + i * dx, y + (cheatLength-i-1) * dy)) |>
+                                    List.where (fun (x, y) -> 0 <= x && x < lenX && 0 <= y && y < lenY) |>
+                                    List.where (fun (x, y) -> dmBwd[x,y] <> -1)
+                let cheats = cheatEnds |>
+                                List.map (fun cheatEnd ->
+                                        let remaining = dmBwd[fst cheatEnd, snd cheatEnd]
+                                        let newLength = stepsStart + cheatLength + remaining - 1
+                                        let savings = pathLength - newLength
+                                        ((cheatStart, cheatEnd), savings)
+                                    ) |>
+                                List.where (fun (_, s) -> s > 0)
+                _trackCheats cheatStart stepsStart direction (cheatLength+1) (cheats :: acc)
         let startSteps = dmFwd[fst startOnTrack,snd startOnTrack]
-        [(-1, 0); (1, 0); (0, -1); (0, 1)] |>
-            List.collect (fun (dx, dy) ->
+        [
+            ((-1,  0), (-1, +1))
+            ((-1,  0), (-1, -1))
+            ((+1,  0), (+1, +1))
+            ((+1,  0), (+1, -1))
+        ] |>
+            List.collect (fun ((dx, dy), direction) ->
                 let cheatStart = (fst startOnTrack + dx, snd startOnTrack + dy)
                 if dmFwd[fst cheatStart, snd cheatStart] = -1 then
-                    _trackCheats (cheatStart, startSteps) ((dx, dy), (dy, dx)) cheatStart [] 1 @
-                    _trackCheats (cheatStart, startSteps) ((dx, dy), (-dy, -dx)) cheatStart [] 1
+                    _trackCheats cheatStart startSteps direction 2 []
                 else []
             )
     let positions = coordinates dmFwd |>
@@ -122,14 +125,16 @@ printfn $"There are {numberSavingAtLeast 50} cheats that would save at least 50 
 printfn $"There are {numberSavingAtLeast 100} cheats that would save at least 100 ps"
 
 
-let (a,b), _ = cheatInfo
+if map.GetLength(0) = 15 then
+    let (a,b), _ = cheatInfo
 
-printArray a (fun x y ->
-    let an = a[x,y]
-    let bn = b[x,y]
-    let aS = if an = -1 then "" else $"{an}"
-    let bS = if bn = -1 then "" else $"{bn}"
-    $"{aS};{bS};";
-    )
 
-printfn $"%A{cheats |> List.where (fun x -> snd x = 76)}"
+    printArray a (fun x y ->
+        let an = a[x,y]
+        let bn = b[x,y]
+        let aS = if an = -1 then "" else $"{an}"
+        let bS = if bn = -1 then "" else $"{bn}"
+        $"{aS};{bS};";
+        )
+
+    printfn $"%A{cheats |> List.where (fun x -> snd x = 74)}"
