@@ -54,8 +54,8 @@ let trackPath (map: Map) : CheatInput =
                 | _ -> 0x7fff_ffff
     let fromStart : DistanceMap = Array2D.init (map.GetLength(0)) (map.GetLength(1)) (fun _ _ -> -1)
     let fromEnd : DistanceMap = Array2D.copy fromStart
-    let len = track (findSinglePoint 'S') 1 'E' fromStart
-    track (findSinglePoint 'E') 1 'S' fromEnd |> ignore
+    let len = track (findSinglePoint 'S') 0 'E' fromStart
+    track (findSinglePoint 'E') 0 'S' fromEnd |> ignore
     ((fromStart, fromEnd), len)
 
 let findCheats (((dmFwd, dmBwd), pathLength): CheatInput) : Cheat list =
@@ -64,42 +64,38 @@ let findCheats (((dmFwd, dmBwd), pathLength): CheatInput) : Cheat list =
     let lenY = dmFwd.GetLength 1
 
     let trackCheats (startOnTrack: Pos) : Cheat list =
-        let rec _trackCheats (cheatStart: Pos) (stepsStart: int) (direction: Pos) (cheatLength: int) (acc: Cheat list list): Cheat list =
+        let rec _generateCheats (cheatStart: Pos) (stepsStart: int) (cheatLength: int) (acc: Cheat list list): Cheat list =
             if cheatLength > maxLen then acc |> List.concat
             else
                 let x, y = cheatStart
-                let dx, dy = direction
-                let cheatEnds = [ 0 .. cheatLength-1 ] |>
-                                    List.map (fun i -> (x + i * dx, y + (cheatLength-i-1) * dy)) |>
-                                    List.where (fun (x, y) -> 0 <= x && x < lenX && 0 <= y && y < lenY) |>
-                                    List.where (fun (x, y) -> dmBwd[x,y] <> -1)
+                let cl=cheatLength
+                let diagonalEnds = [ 1 .. cl ] |>
+                                        List.collect (fun i -> [(+i, +(cl-i));
+                                                                (+i, -(cl-i));
+                                                                (-i, +(cl-i));
+                                                                (-i, -(cl-i))])
+                let straightEnds = [(cl, 0); (-cl, 0); (0, cl); (0, -cl)]
+                let cheatEnds = (diagonalEnds @ straightEnds) |>
+                                    Seq.map (fun (dx, dy) -> (x + dx, y + dy)) |>
+                                    Seq.where (fun (x, y) -> 0 <= x && x < lenX && 0 <= y && y < lenY) |>
+                                    Seq.where (fun (x, y) -> dmBwd[x,y] <> -1)
                 let cheats = cheatEnds |>
-                                List.map (fun cheatEnd ->
+                                Seq.map (fun cheatEnd ->
                                         let remaining = dmBwd[fst cheatEnd, snd cheatEnd]
-                                        let newLength = stepsStart + cheatLength + remaining - 1
+                                        let newLength = stepsStart + cheatLength + remaining
                                         let savings = pathLength - newLength
                                         ((cheatStart, cheatEnd), savings)
                                     ) |>
-                                List.where (fun (_, s) -> s > 0)
-                _trackCheats cheatStart stepsStart direction (cheatLength+1) (cheats :: acc)
+                                Seq.where (fun (_, s) -> s >= 50) |> Seq.toList
+                _generateCheats cheatStart stepsStart (cheatLength+1) (cheats :: acc)
         let startSteps = dmFwd[fst startOnTrack,snd startOnTrack]
-        [
-            ((-1,  0), (-1, +1))
-            ((-1,  0), (-1, -1))
-            ((+1,  0), (+1, +1))
-            ((+1,  0), (+1, -1))
-        ] |>
-            List.collect (fun ((dx, dy), direction) ->
-                let cheatStart = (fst startOnTrack + dx, snd startOnTrack + dy)
-                if dmFwd[fst cheatStart, snd cheatStart] = -1 then
-                    _trackCheats cheatStart startSteps direction 2 []
-                else []
-            )
+        _generateCheats startOnTrack startSteps 2 []
     let positions = coordinates dmFwd |>
                        List.where (fun (x, y) -> x > 0 && x < dmFwd.GetLength(0)-1 && y > 0 && y < dmFwd.GetLength(1)-1) |>
                        List.where (fun (x, y) -> dmFwd[x,y] <> -1)
     positions |>
-        List.collect trackCheats |> List.distinct
+        List.collect trackCheats |>
+            List.distinctBy fst
 
 let printArray (arr : 'a[,]) (fn: int -> int -> string) : unit =
     for y in 0..arr.GetLength(1)-1 do
@@ -113,28 +109,16 @@ let cheatInfo = trackPath map
 let cheats = findCheats cheatInfo
 
 
-let groups = cheats |> List.groupBy snd |> List.sortBy fst
+if map.GetLength(0) = 15 then
+    let groups = cheats |> List.groupBy (fun (_, s) -> s) |> List.sortBy fst
 
-groups |> Seq.iter (fun g ->
-    printfn $"There are {(snd g).Length} cheats that save {fst g} picoseconds"
-)
+    groups |> Seq.iter (fun g ->
+        printfn $"There are {(snd g).Length} cheats that save {fst g} picoseconds"
+    )
+    printfn ""
 
-let numberSavingAtLeast n = cheats |> Seq.where (fun c -> snd c >= n) |> Seq.length
+let numberSavingAtLeast n = cheats |> Seq.where (fun (_, s) -> s >= n) |> Seq.length
 
 printfn $"There are {numberSavingAtLeast 50} cheats that would save at least 50 ps"
+printfn ""
 printfn $"There are {numberSavingAtLeast 100} cheats that would save at least 100 ps"
-
-
-if map.GetLength(0) = 15 then
-    let (a,b), _ = cheatInfo
-
-
-    printArray a (fun x y ->
-        let an = a[x,y]
-        let bn = b[x,y]
-        let aS = if an = -1 then "" else $"{an}"
-        let bS = if bn = -1 then "" else $"{bn}"
-        $"{aS};{bS};";
-        )
-
-    printfn $"%A{cheats |> List.where (fun x -> snd x = 74)}"
