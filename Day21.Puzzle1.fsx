@@ -32,12 +32,22 @@ let arrowKeypadPositions : Map<ArrowKey,Pos> =
   ] |> Map.ofList
 
 let typeNumKeys (remoteKeys: NumKey list) : ArrowKey list =
-    let typeNumKey (key: NumKey) (currentPosition: Pos) : ArrowKey list * Pos =
+    let typeNumKey (key: NumKey) (currentPos: Pos) : ArrowKey list * Pos =
         let newPosition : Pos = numKeypadPositions |> Map.find key
-        let xSteps = newPosition.x - currentPosition.x
-        let ySteps = newPosition.y - currentPosition.y
-        let moveSteps = List.replicate (abs xSteps) (if xSteps < 0 then L else R) @
-                        List.replicate (abs ySteps) (if ySteps < 0 then U else D)
+        let xDelta = newPosition.x - currentPos.x
+        let yDelta = newPosition.y - currentPos.y
+        let xSteps = List.replicate (abs xDelta) (if xDelta < 0 then L else R)
+        let ySteps = List.replicate (abs yDelta) (if yDelta < 0 then U else D)
+        let moveSteps = if currentPos.x = 0 && newPosition.y = 3 then
+                            xSteps @ ySteps
+                        elif currentPos.y = 3 && newPosition.x = 0 then
+                            ySteps @ xSteps
+                        elif xDelta < 0 then
+                            xSteps @ ySteps
+                        elif yDelta <> 0 then
+                            ySteps @ xSteps
+                        else
+                            xSteps @ ySteps
         (moveSteps @ [A], newPosition)
     let rec _typeNumKeys (remoteKeys: NumKey list) (remotePosition: Pos) (allLocalKeys: ArrowKey list list) : ArrowKey list =
         match remoteKeys with
@@ -51,10 +61,20 @@ let typeNumKeys (remoteKeys: NumKey list) : ArrowKey list =
 let typeArrowKeys (remoteKeys: ArrowKey list) : ArrowKey list =
     let typeArrowKey (key: ArrowKey) (currentPos: Pos) : ArrowKey list * Pos =
         let newPosition : Pos = arrowKeypadPositions |> Map.find key
-        let xSteps = newPosition.x - currentPos.x
-        let ySteps = newPosition.y - currentPos.y
-        let moveSteps = List.replicate (abs xSteps) (if xSteps < 0 then L else R) @
-                        List.replicate (abs ySteps) (if ySteps < 0 then U else D)
+        let xDelta = newPosition.x - currentPos.x
+        let yDelta = newPosition.y - currentPos.y
+        let xSteps = List.replicate (abs xDelta) (if xDelta < 0 then L else R)
+        let ySteps = List.replicate (abs yDelta) (if yDelta < 0 then U else D)
+        let moveSteps = if currentPos.x = 0 && newPosition.y = 0 then
+                            xSteps @ ySteps
+                        elif currentPos.y = 0 && newPosition.x = 0 then
+                            ySteps @ xSteps
+                        elif xDelta < 0 then
+                            xSteps @ ySteps
+                        elif yDelta <> 0 then
+                            ySteps @ xSteps
+                        else
+                            xSteps @ ySteps
         (moveSteps @ [A], newPosition)
     let rec _typeArrowKey (remoteKeys: ArrowKey list) (remotePosition: Pos) (allLocalKeys: ArrowKey list list) : ArrowKey list =
         match remoteKeys with
