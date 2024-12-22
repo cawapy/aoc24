@@ -12,11 +12,11 @@ let nextSecret (secret: secretT) : secretT =
     let prune (secret: secretT) : secretT =
         secret % secretT 16777216
 
-    let step1 (s: secretT) : secretT = prune (mix s (s * (secretT   64)))
-    let step2 (s: secretT) : secretT = prune (mix s (s / (secretT   32)))
-    let step3 (s: secretT) : secretT = prune (mix s (s * (secretT 2048)))
+    let step1 (s: secretT) : secretT = (s * (secretT   64)) |> mix s |> prune
+    let step2 (s: secretT) : secretT = (s / (secretT   32)) |> mix s |> prune
+    let step3 (s: secretT) : secretT = (s * (secretT 2048)) |> mix s |> prune
 
-    step3 (step2 (step1 secret))
+    secret |> step1 |> step2 |> step3
 
 let applyNTimes (f: 'a -> 'a) (n: int) : 'a -> 'a =
     let rec _applyNTimes (fn: 'a -> 'a) (n: int) : 'a -> 'a =
