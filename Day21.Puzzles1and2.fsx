@@ -1,4 +1,5 @@
 #load "TextInput/Reader.fsx"
+open System.Collections.Generic
 open TextInput
 let sample = [
    "029A"
@@ -72,23 +73,34 @@ let formatArrowKeys(keys: ArrowKey list) : string =
         match arrowKey with | U -> "^" | D -> "v" | L -> "<" | R -> ">" | A -> "A"
     String.concat "" (keys |> List.map formatArrowKey)
 
-let typeKeysIndirectly (remoteNumKeys: NumKey list) =
-    let rec typeIndirectly (remoteArrowKeys: ArrowKey list) levels =
-        if levels = 0 then remoteArrowKeys
-        else typeIndirectly (typeArrowKeys remoteArrowKeys) (levels - 1)
-    typeIndirectly (typeNumKeys remoteNumKeys) 2
+let typeKeysIndirectly (remoteNumKeys: NumKey list) (levels: int): int64 =
+    let cache = Dictionary<int * ArrowKey list, int64>()
+    let rec splitAtA (acc0: ArrowKey list) (acc: ArrowKey list list) (input: ArrowKey list) : ArrowKey list list =
+        match input with
+        | [] -> acc |> List.rev
+        | A :: tail -> splitAtA [] (((A::acc0) |> List.rev) :: acc) tail
+        | x :: tail -> splitAtA (x::acc0) acc tail
+    let rec typeIndirectly (remoteArrowKeys: ArrowKey list) levels : int64=
+        let getPartLength (part: ArrowKey list) : int64 =
+            match cache.TryGetValue((levels, part)) with
+            | true, result -> result
+            | false, _ ->
+                let result = typeIndirectly (typeArrowKeys part) (levels - 1)
+                cache.Add((levels, part), result)
+                result
+        if levels = 0 then remoteArrowKeys |> List.length |> int64
+        else remoteArrowKeys |> splitAtA [] [] |> List.map getPartLength |> List.sum
+    typeIndirectly (typeNumKeys remoteNumKeys) levels
 
-let calculateComplexity (numKeys: NumKey list) =
+let calculateComplexity (levels: int) (numKeys: NumKey list) =
     let rec getNumber (numKeys: NumKey list) valueAcc =
         match numKeys with
         | [] -> valueAcc
         | NpA :: _ -> valueAcc
         | Num n :: tail -> getNumber tail (valueAcc * 10 + n)
-    let arrowKeys = typeKeysIndirectly numKeys
-    let numberOfStrokes = arrowKeys |> List.length
+    let numberOfStrokes = typeKeysIndirectly numKeys levels
     let enteredNumber = getNumber numKeys 0
-    let complexity = numberOfStrokes * enteredNumber
-    printfn $"{formatNumKeys numKeys}: %-80s{formatArrowKeys arrowKeys} // {numberOfStrokes} * %3d{enteredNumber} = %5d{complexity}"
+    let complexity = numberOfStrokes * int64 enteredNumber
     complexity
 
 let parseLines (lines: string list) : NumKey list list =
@@ -100,5 +112,7 @@ let parseLines (lines: string list) : NumKey list list =
     lines |> List.map parseLine
 
 let input = parseLines lines
-let total = input |> List.sumBy calculateComplexity
-printfn $"The sum of complexities is {total}"
+let totalPart1 = input |> List.sumBy (calculateComplexity 2)
+let totalPart2 = input |> List.sumBy (calculateComplexity 25)
+printfn $"The sum of complexities for part 1 is {totalPart1}"
+printfn $"The sum of complexities for part 2 is {totalPart2}"
