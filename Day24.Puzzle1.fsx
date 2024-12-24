@@ -1,15 +1,11 @@
-
-
-
 open System
-open System.Collections.Generic
 
 type Operation = AND | OR | XOR
 type WireName = string
 type Gate = WireName * Operation * WireName
 type WireDefinition = Function of Gate | Evaluated of bool
 
-let rec solveWire (definitions: Dictionary<WireName, WireDefinition>) (name: WireName) : bool =
+let rec solveWire (definitions: Map<WireName, WireDefinition>) (name: WireName) : bool =
     let evaluate (op: Operation) (a: bool) (b: bool) : bool =
         match op with
         | AND -> a && b
@@ -18,10 +14,7 @@ let rec solveWire (definitions: Dictionary<WireName, WireDefinition>) (name: Wir
     let definition = definitions[name]
     match definition with
     | Evaluated e -> e
-    | Function (w1, op, w2) ->
-            let result = evaluate op (solveWire definitions w1) (solveWire definitions w2)
-            definitions[name] <- Evaluated result
-            result
+    | Function (w1, op, w2) -> evaluate op (solveWire definitions w1) (solveWire definitions w2)
 
 let parseInput (lines: string list) : (WireName * WireDefinition) list =
     let parseLine (line: string) : (WireName * WireDefinition) option =
@@ -35,8 +28,7 @@ let parseInput (lines: string list) : (WireName * WireDefinition) list =
     lines |> List.map parseLine |> List.choose id
 
 let solvePuzzle (lines: string list) : unit =
-    let definitions = Dictionary<string, WireDefinition>()
-    parseInput lines |> Seq.iter definitions.Add
+    let definitions = parseInput lines |> Map.ofList
     let zNames = definitions.Keys |> Seq.where (fun (s : string) -> s.StartsWith("z")) |> Seq.toList
     let rec _solveWires (names: WireName list) (acc: int64) : int64 =
         match names with
