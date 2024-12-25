@@ -30,7 +30,7 @@ module Reader =
                 printfn "Paste input (or nothing for builtin default), terminate with EOF."
         let input = _readLinesRev [] |> List.rev
         match input with
-        | [] -> printfn "Using builtin default"; options.Default
+        | [] when options.Default <> [] -> printfn "Using builtin default"; options.Default
         | x -> printfn "Using provided input"; x
 
     let readInputOptions = { Input = System.Console.In; EmptyLineTerminator = true; Default = [] }
