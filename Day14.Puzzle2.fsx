@@ -34,16 +34,6 @@ let calculatePosition (steps: int) (fieldSize: int*int) (robot: Robot) =
     let sx, sy = fieldSize
     (((x0 + steps * vx) % sx + sx) % sx, ((y0 + steps * vy) % sy + sy) % sy)
 
-let getQuadrant (fieldSize: int*int) (pos: Pos) =
-    let sx, sy = fieldSize
-    let cx, cy = (sx/2, sy/2)
-    match pos with
-    | x, y when x < cx && y < cy -> TL
-    | x, y when x > cx && y < cy -> TR
-    | x, y when x < cx && y > cy -> BL
-    | x, y when x > cx && y > cy -> BR
-    | _ -> None
-
 let fieldSize = if lines.Length < 20 then (11, 7) else (101, 103)
 
 let robots = lines |> List.map parseRobot
@@ -56,8 +46,15 @@ let printConfiguration (fieldSize: int*int) (positions: Pos list) =
         printfn ""
     printfn "---------------------------------------------------------------------------------------------"
 
-for i in 0 .. 10000 do
-    let t = i
-    let p = robots |> List.map (calculatePosition t fieldSize)
-    printfn $"{t} seconds"
-    printConfiguration fieldSize p
+let generate (robots: Robot list) (fieldSize: int*int) (i: int) =
+    robots |> List.map (calculatePosition i fieldSize)
+
+let findTimeForChristmasTree () =
+    let distribution (positions: Pos list) : int =
+        (positions |> Seq.map fst |> Seq.distinct |> Seq.length) + (positions |> Seq.map snd |> Seq.distinct |> Seq.length)
+    let candidates = [0 .. 10000]
+    candidates |> Seq.minBy (fun i -> (distribution (generate robots fieldSize i)))
+
+let t = findTimeForChristmasTree ()
+printConfiguration fieldSize (generate robots fieldSize t)
+printfn $"{t} seconds"
